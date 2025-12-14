@@ -1,6 +1,6 @@
 # Implementation Plan: Expand AI Book with Modules 2, 3, and 4
 
-**Branch**: `002-add-book-modules` | **Date**: 2025-12-14 | **Spec**: [specs/002-add-book-modules/spec.md](spec.md)
+**Branch**: `main` | **Date**: 2025-12-14 | **Spec**: [specs/002-add-book-modules/spec.md](specs/002-add-book-modules/spec.md)
 **Input**: Feature specification from `specs/002-add-book-modules/spec.md`
 
 ## Summary
