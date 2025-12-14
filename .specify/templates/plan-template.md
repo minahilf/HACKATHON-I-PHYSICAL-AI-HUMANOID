@@ -31,7 +31,9 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+*   [ ] **Hands-On First:** Does the plan prioritize practical examples and project-based learning?
+*   [ ] **Beginner-Friendly Content:** Is the planned implementation and its documentation accessible to beginners?
+*   [ ] **Docusaurus for Documentation:** Does the plan include creating or updating documentation in Docusaurus?
 
 ## Project Structure
 
