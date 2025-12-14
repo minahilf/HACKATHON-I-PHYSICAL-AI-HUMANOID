@@ -4,20 +4,163 @@
  */
 
 .heroBanner {
-  padding: 4rem 0;
-  text-align: center;
+  padding: 0; /* Remove default padding to control hero layout */
   position: relative;
-  overflow: hidden;
+  overflow: hidden; /* Ensure 3D doesn't overflow */
+  background: #0a0a0a; /* Very dark grey/black background */
+  min-height: 80vh; /* Make hero section tall */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heroContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: var(--ifm-container-width); /* Use Docusaurus container width */
+  padding: 2rem var(--ifm-spacing-horizontal);
+  z-index: 1; /* Ensure content is above potential background layers */
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: 2rem;
+  color: #ffffff; /* White text for contrast */
+}
+
+.hero3D {
+  width: 100%;
+  height: 500px; /* Adjust height as needed for the 3D scene */
+  /* Ensure Spline component takes full available space */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.hero3D > div {
+  width: 100%;
+  height: 100%;
+}
+
+.neonGradient {
+  /* Neon gradient effect */
+  background: linear-gradient(90deg, #0ff, #007bff); /* Cyan to Blue */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 3.5rem; /* Adjust as needed */
+  font-weight: bold;
+  text-shadow: 
+    0 0 7px rgba(0, 255, 255, 0.7), /* Cyan glow */
+    0 0 10px rgba(0, 255, 255, 0.7),
+    0 0 21px rgba(0, 123, 255, 0.7), /* Blue glow */
+    0 0 42px rgba(0, 123, 255, 0.7);
+  transition: all 0.3s ease-in-out;
+}
+
+.neonGradient:hover {
+  text-shadow: 
+    0 0 10px rgba(0, 255, 255, 1), 
+    0 0 20px rgba(0, 255, 255, 1), 
+    0 0 30px rgba(0, 123, 255, 1), 
+    0 0 50px rgba(0, 123, 255, 1);
 }
 
 @media screen and (max-width: 996px) {
-  .heroBanner {
+  .heroContent {
+    flex-direction: column;
+    text-align: center;
     padding: 2rem;
+  }
+  .heroText {
+    padding-right: 0;
+    margin-bottom: 2rem;
+  }
+  .hero3D {
+    height: 400px; /* Smaller height on mobile */
+  }
+  .neonGradient {
+    font-size: 2.5rem;
   }
 }
 
 .buttons {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  margin-top: 2rem;
+}
+
+@media screen and (max-width: 996px) {
+  .buttons {
+    justify-content: center;
+  }
+}
+
+/* Curriculum Section */
+.curriculumSection {
+  background-color: #0a0a0a; /* Match hero background */
+  padding: 4rem 0;
+  color: #ffffff;
+}
+
+.sectionTitle {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  color: #ffffff;
+}
+
+.moduleGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+}
+
+@media screen and (max-width: 996px) {
+  .moduleGrid {
+    grid-template-columns: 1fr; /* Single column on mobile */
+  }
+}
+
+.moduleCard {
+  background: rgba(255, 255, 255, 0.05); /* Translucent background */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Thin white border */
+  border-radius: 15px;
+  backdrop-filter: blur(10px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(10px); /* For Safari */
+  padding: 1.5rem;
+  text-align: center;
+  color: inherit; /* Inherit text color from parent */
+  text-decoration: none; /* Remove underline */
+  transition: all 0.3s ease-in-out;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 180px;
+}
+
+.moduleCard:hover {
+  transform: translateY(-10px) scale(1.02); /* Lift effect */
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.5), /* Cyan glow */
+    0 0 25px rgba(0, 123, 255, 0.5); /* Blue glow */
+  border-color: rgba(0, 255, 255, 0.5); /* Glowing border */
+}
+
+.moduleCard h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #0ff; /* Cyan title */
+}
+
+.moduleCard p {
+  font-size: 0.9rem;
+  color: #ccc;
 }
