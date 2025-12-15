@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "@splinetool/react-spline": "^4.1.0"
+    "@splinetool/react-spline": "^2.2.6"
   }
 }

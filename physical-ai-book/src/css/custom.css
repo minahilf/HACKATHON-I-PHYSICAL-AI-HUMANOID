@@ -28,3 +28,26 @@
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+/* Custom CSS file ke end me paste karein */
+
+/* Navbar Glassmorphism Effect */
+.navbar {
+  background: rgba(10, 10, 10, 0.8) !important; /* Semi-transparent Dark */
+  backdrop-filter: blur(12px); /* Blur effect */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Navbar Links Hover Effect */
+.navbar__item:hover {
+  color: #ff8a00 !important; /* Orange glow on hover */
+  text-shadow: 0 0 10px rgba(255, 138, 0, 0.5);
+}
+
+/* Navbar Title styling */
+.navbar__title {
+  background: linear-gradient(90deg, #ff8a00, #e52e71);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+}
