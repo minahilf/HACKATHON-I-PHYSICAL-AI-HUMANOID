@@ -9,7 +9,8 @@ from sentence_transformers import SentenceTransformer
 load_dotenv()
 
 # --- Configuration ---
-DOCS_DIR = "../physical-ai-book/docs"
+# Correctly point to the sibling 'docs' folder from the 'backend' directory
+DOCS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "physical-ai-book", "docs"))
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION_NAME = "textbook_rag"
@@ -35,17 +36,25 @@ def process_documents():
     Finds all Markdown files, chunks them, generates embeddings,
     and uploads them to a Qdrant collection.
     """
-    # Find all .md and .mdx files recursively
-    doc_files = glob.glob(os.path.join(DOCS_DIR, "**", "*.md*"), recursive=True)
+    # Use glob to find all .md and .mdx files recursively
+    search_pattern_md = os.path.join(DOCS_DIR, "**", "*.md")
+    search_pattern_mdx = os.path.join(DOCS_DIR, "**", "*.mdx")
     
+    doc_files = glob.glob(search_pattern_md, recursive=True) + glob.glob(search_pattern_mdx, recursive=True)
+    
+    print(f"Found {len(doc_files)} documents to process.")
+
     all_chunks = []
     for file_path in doc_files:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            # Simple chunking by character
-            for i in range(0, len(content), 1000):
-                chunk = content[i:i+1000]
-                all_chunks.append({"text": chunk, "source": os.path.basename(file_path)})
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                # Simple chunking by character
+                for i in range(0, len(content), 1000):
+                    chunk = content[i:i+1000]
+                    all_chunks.append({"text": chunk, "source": os.path.basename(file_path)})
+        except Exception as e:
+            print(f"Error reading file {file_path}: {e}")
 
     # Generate embeddings for all chunks
     points = []
@@ -62,11 +71,13 @@ def process_documents():
 
     # Upload points to Qdrant
     if points:
+        print(f"Uploading {len(points)} points to Qdrant...")
         qdrant_client.upsert(
             collection_name=COLLECTION_NAME,
             points=points,
             wait=True  # Wait for the operation to complete
         )
+        print("Upload complete.")
 
 if __name__ == "__main__":
     print("Starting ingestion process with sentence-transformers...")
