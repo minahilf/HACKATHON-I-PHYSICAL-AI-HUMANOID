@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+gunicorn
+python-dotenv
+sentence-transformers
+qdrant-client
+google-generativeai
+pydantic
+psycopg2-binary
