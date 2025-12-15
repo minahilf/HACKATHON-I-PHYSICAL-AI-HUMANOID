@@ -2,8 +2,8 @@ import os
 import glob
 import uuid
 from dotenv import load_dotenv
-from openai import OpenAI
 from qdrant_client import QdrantClient, models
+from sentence_transformers import SentenceTransformer
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,25 +12,23 @@ load_dotenv()
 DOCS_DIR = "../physical-ai-book/docs"
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 COLLECTION_NAME = "textbook_rag"
 
 # --- Initialize Clients ---
 qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def setup_qdrant_collection():
-    """Checks if the Qdrant collection exists and creates it if it doesn't."""
-    try:
-        qdrant_client.get_collection(collection_name=COLLECTION_NAME)
-        print(f"Collection '{COLLECTION_NAME}' already exists.")
-    except Exception:
-        print(f"Collection '{COLLECTION_NAME}' not found. Creating it now...")
-        qdrant_client.recreate_collection(
-            collection_name=COLLECTION_NAME,
-            vectors_config=models.VectorParams(size=1536, distance=models.Distance.COSINE),
-        )
-        print("Collection created successfully.")
+    """
+    Deletes the existing collection (if any) and creates a new one
+    with the correct vector size for the sentence-transformer model.
+    """
+    print(f"Recreating collection '{COLLECTION_NAME}' with vector size 384...")
+    qdrant_client.recreate_collection(
+        collection_name=COLLECTION_NAME,
+        vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE),
+    )
+    print("Collection created successfully.")
 
 def process_documents():
     """
@@ -52,16 +50,12 @@ def process_documents():
     # Generate embeddings for all chunks
     points = []
     for chunk_data in all_chunks:
-        response = openai_client.embeddings.create(
-            input=chunk_data["text"],
-            model="text-embedding-3-small"
-        )
-        embedding = response.data[0].embedding
+        embedding = embedding_model.encode(chunk_data["text"])
         
         points.append(
             models.PointStruct(
                 id=str(uuid.uuid4()),
-                vector=embedding,
+                vector=embedding.tolist(),
                 payload=chunk_data
             )
         )
@@ -75,7 +69,7 @@ def process_documents():
         )
 
 if __name__ == "__main__":
-    print("Starting ingestion process...")
+    print("Starting ingestion process with sentence-transformers...")
     setup_qdrant_collection()
     process_documents()
     print("Ingestion Complete!")
