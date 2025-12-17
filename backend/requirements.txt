@@ -1,9 +1,7 @@
 fastapi
-uvicorn[standard]
-gunicorn
+uvicorn
 python-dotenv
-sentence-transformers
-qdrant-client
+qdrant-client==1.9.1
 google-generativeai
 pydantic
-psycopg2-binary
+requests

@@ -1,17 +1,15 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
-from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 import google.generativeai as genai
-import os
 from dotenv import load_dotenv
 
-# --- Load Environment Variables ---
 load_dotenv()
 
-# Database imports
+# --- Database Setup ---
 try:
     from database import init_db, get_db_connection
 except ImportError:
@@ -19,144 +17,100 @@ except ImportError:
     def get_db_connection(): return None
 
 # --- Configuration ---
-# API Key check
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    print("CRITICAL WARNING: GEMINI_API_KEY is missing in .env")
-else:
+if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 COLLECTION_NAME = "textbook_rag"
-
-# --- Global Variables ---
-embedding_model = None
 qdrant_client = None
-llm_model = None 
+CHOSEN_MODEL = None # Global model variable
 
-# --- Pydantic Models ---
 class ChatMessage(BaseModel):
     message: str
 
 # --- Lifespan Manager ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global embedding_model, qdrant_client, llm_model
+    global qdrant_client, CHOSEN_MODEL
     
-    # 1. Embedding Model
-    print("Loading SentenceTransformer model...")
-    embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-    
-    # 2. Qdrant Client
+    # 1. Initialize Qdrant
     print("Initializing Qdrant client...")
     qdrant_client = QdrantClient(
         url=os.getenv("QDRANT_URL"), 
-        api_key=os.getenv("QDRANT_API_KEY")
+        api_key=os.getenv("QDRANT_API_KEY"),
+        timeout=60 
     )
     
-    # 3. Gemini LLM (FIXED HERE)
-    print("Initializing Gemini LLM...")
+    # 2. ✅ UNIVERSAL MODEL SETTING (Ahmed Style)
+    print("Finding available Gemini model...")
     try:
-        # Using a model from your available list:
-        llm_model = genai.GenerativeModel('gemini-flash-latest')
-        print("Gemini Model Ready (Using gemini-2.0-flash).")
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        # Pehle flash-latest try karo, warna koi bhi pehla model utha lo
+        if 'models/gemini-1.5-flash-latest' in available_models:
+            CHOSEN_MODEL = 'gemini-1.5-flash-latest'
+        elif 'models/gemini-1.5-flash' in available_models:
+            CHOSEN_MODEL = 'gemini-1.5-flash'
+        else:
+            CHOSEN_MODEL = available_models[0].replace('models/', '')
+        print(f"✅ Using Model: {CHOSEN_MODEL}")
     except Exception as e:
-        print(f"Failed to load Gemini: {e}")
+        print(f"❌ Error finding model: {e}")
+        CHOSEN_MODEL = "gemini-pro" # Fallback
 
-    # 4. Database
-    print("Initializing database...")
+    # 3. Database
     try:
         init_db()
-    except Exception as e:
-        print(f"Database Init Error: {e}")
+    except Exception: pass
 
     yield
 
-# --- FastAPI App ---
 app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    allow_methods=["*"],  
+    allow_headers=["*"],  )
 
 @app.get("/")
 def read_root():
-    return {"status": "AI Backend Active"}
+    return {"status": f"Backend Active using {CHOSEN_MODEL}"}
 
 @app.post("/api/chat")
 async def chat_handler(chat_message: ChatMessage):
     user_query = chat_message.message.strip()
 
-    # 1. Greetings Check
-    greetings = ["hi", "hello", "hey", "salam", "aoa", "hola"]
-    if user_query.lower() in greetings:
-        return {"response": "Hello! 👋 I am your Physical AI Textbook Assistant. Ask me anything about textbook"}
-
-    if not embedding_model or not qdrant_client or not llm_model:
-        raise HTTPException(status_code=503, detail="System is initializing or missing configuration.")
+    if user_query.lower() in ["hi", "hello", "hey"]:
+        return {"response": "Hello! I am your AI Assistant. Ask me anything about the textbook!"}
 
     try:
-        # 2. Search Textbook (Retrieval)
-        query_vector = embedding_model.encode(user_query).tolist()
+        # 1. Embedding
+        emb = genai.embed_content(
+            model="models/text-embedding-004",
+            content=user_query,
+            task_type="retrieval_query"
+        )
         
-        # Robust Search Logic
-        search_results = []
-        try:
-            search_results = qdrant_client.search(
-                collection_name=COLLECTION_NAME, query_vector=query_vector, limit=10
-            )
-        except AttributeError:
-            result_obj = qdrant_client.query_points(
-                collection_name=COLLECTION_NAME, query=query_vector, limit=10
-            )
-            search_results = result_obj.points
+        # 2. Qdrant Search
+        search_results = qdrant_client.search(
+            collection_name=COLLECTION_NAME, 
+            query_vector=emb['embedding'], 
+            limit=5
+        )
 
-        # Combine Context
-        context_parts = [res.payload['text'] for res in search_results if res.payload and 'text' in res.payload]
-        context_text = "\n\n".join(context_parts)
+        context = "\n\n".join([res.payload['text'] for res in search_results if res.payload])
         
-        if not context_text:
-            return {"response": "I couldn't find specific information in the textbook about that."}
+        if not context:
+            return {"response": "I couldn't find relevant info in the textbook."}
 
-        # 3. Generate Answer using Gemini (The AI Part)
-        prompt = f"""
-        You are a smart teaching assistant for a Robotics course.
-        Answer the student's question based ONLY on the context provided below.
+        # 3. Generate Answer (Using Chosen Model)
+        model = genai.GenerativeModel(CHOSEN_MODEL)
+        prompt = f"Context: {context}\n\nQuestion: {user_query}\nAnswer (3-4 sentences):"
         
-        Context:
-        {context_text}
-        
-        Student Question: {user_query}
-        
-        Instructions:
-        - Provide a concise, clear answer (max 3-4 sentences).
-        - If the answer is technical, explain it simply.
-        - Do not start with "Based on the context". Just answer.
-        """
-
-        response = llm_model.generate_content(prompt)
-        final_answer = response.text
-
-        # 4. Save to Postgres (Optional)
-        try:
-            conn = get_db_connection()
-            if conn:
-                cur = conn.cursor()
-                cur.execute(
-                    "INSERT INTO chat_history (user_query, ai_response) VALUES (%s, %s)",
-                    (user_query, final_answer)
-                )
-                conn.commit()
-                cur.close()
-                conn.close()
-        except Exception:
-            pass 
-
-        return {"response": final_answer}
+        response = model.generate_content(prompt)
+        return {"response": response.text.strip()}
 
     except Exception as e:
         print(f"Error: {e}")
-        return {"response": "Sorry, I'm having trouble thinking right now. Please try again."}
+        return {"response": "Technical glitch, please try again!"}
